@@ -29,14 +29,25 @@ export async function fetchYahooKlines(
   const yahooInterval = YAHOO_INTERVAL_MAP[interval];
   const range = YAHOO_RANGE_MAP[interval];
 
-  // Use our API route to bypass CORS
   const url = `/api/yahoo?symbol=${encodeURIComponent(symbol)}&interval=${yahooInterval}&range=${range}`;
   const res = await fetch(url);
-  if (!res.ok) throw new Error(`API error: ${res.status}`);
+
+  if (!res.ok) {
+    const errorText = await res.text();
+    throw new Error(`API error ${res.status}: ${errorText}`);
+  }
+
   const data = await res.json();
 
+  if (data.error) {
+    throw new Error(`Yahoo error: ${data.error}`);
+  }
+
   const result = data.chart?.result?.[0];
-  if (!result) return [];
+  if (!result) {
+    console.warn(`No chart result for ${symbol}`);
+    return [];
+  }
 
   const timestamps = result.timestamp || [];
   const ohlcv = result.indicators?.quote?.[0] || {};
@@ -49,7 +60,7 @@ export async function fetchYahooKlines(
     const close = ohlcv.close?.[i];
     const volume = ohlcv.volume?.[i];
 
-    if (open != null && high != null && low != null && close != null) {
+    if (open != null && high != null && low != null && close != null && !isNaN(open) && !isNaN(close)) {
       candles.push({
         time: timestamps[i],
         open,
@@ -68,12 +79,23 @@ export async function fetchYahooKlines(
 export async function fetchYahooTicker(symbol: string, market: MarketType) {
   const url = `/api/yahoo?symbol=${encodeURIComponent(symbol)}&interval=1d&range=2d`;
   const res = await fetch(url);
-  if (!res.ok) throw new Error(`API error: ${res.status}`);
+
+  if (!res.ok) {
+    throw new Error(`API error: ${res.status}`);
+  }
+
   const data = await res.json();
+
+  if (data.error) {
+    throw new Error(`Yahoo error: ${data.error}`);
+  }
 
   const result = data.chart?.result?.[0];
   const meta = result?.meta;
-  if (!meta) return null;
+  if (!meta) {
+    console.warn(`No meta for ${symbol}`);
+    return null;
+  }
 
   const price = meta.regularMarketPrice || 0;
   const previousClose = meta.chartPreviousClose || meta.previousClose || price;

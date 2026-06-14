@@ -6,23 +6,11 @@ import { MarketType } from "@/types";
 
 type TabType = "watch" | "ob" | "stats" | "alerts";
 
-const WATCH_LIST = [
-  { symbol: "RELIANCE", name: "Reliance Ind.", market: "indian" as MarketType, basePrice: 2847 },
-  { symbol: "TCS", name: "Tata Consult.", market: "indian" as MarketType, basePrice: 3892 },
-  { symbol: "INFY", name: "Infosys Ltd.", market: "indian" as MarketType, basePrice: 1673 },
-  { symbol: "HDFCBANK", name: "HDFC Bank", market: "indian" as MarketType, basePrice: 1745 },
-  { symbol: "BTCUSDT", name: "Bitcoin", market: "crypto" as MarketType, basePrice: 67420 },
-  { symbol: "ETHUSDT", name: "Ethereum", market: "crypto" as MarketType, basePrice: 3520 },
-  { symbol: "SOLUSDT", name: "Solana", market: "crypto" as MarketType, basePrice: 175 },
-  { symbol: "DOGEUSDT", name: "Dogecoin", market: "crypto" as MarketType, basePrice: 0.165 },
-  { symbol: "EURUSD=X", name: "EUR/USD", market: "forex" as MarketType, basePrice: 1.0845 },
-  { symbol: "USDINR=X", name: "USD/INR", market: "forex" as MarketType, basePrice: 83.62 },
-  { symbol: "^NSEI", name: "NIFTY 50", market: "indian" as MarketType, basePrice: 24350 },
-];
-
 export default function RightSidebar() {
-  const { symbol, setSymbol, ticker, watchlist, alerts } = useStore();
+  const { symbol, market, setSymbol, ticker, watchlist, alerts, removeFromWatchlist } = useStore();
   const [activeTab, setActiveTab] = useState<TabType>("watch");
+  const [addMode, setAddMode] = useState(false);
+  const [addMarket, setAddMarket] = useState<MarketType>("crypto");
 
   const tabs: { id: TabType; label: string }[] = [
     { id: "watch", label: "Watchlist" },
@@ -31,22 +19,24 @@ export default function RightSidebar() {
   ];
 
   const marketBadge = (market: MarketType) => {
-    const styles: Record<MarketType, string> = {
-      crypto: "background:rgba(56,189,248,0.15);color:var(--blue)",
-      forex: "background:rgba(45,212,191,0.15);color:var(--teal)",
-      indian: "background:rgba(167,139,250,0.15);color:var(--purple)",
-    };
     const labels: Record<MarketType, string> = {
       crypto: "CRYPTO",
       forex: "FOREX",
       indian: "INDIA",
     };
+    const colors: Record<MarketType, string> = {
+      crypto: "var(--blue)",
+      forex: "var(--teal)",
+      indian: "var(--purple)",
+    };
     return (
-      <span className="text-[7px] px-1 py-0.5 rounded ml-1" style={{ background: styles[market].split(';')[0].split(':')[1], color: styles[market].split(';')[1].split(':')[1] }}>
+      <span className="text-[7px] px-1 py-0.5 rounded ml-1" style={{ background: `color-mix(in srgb, ${colors[market]} 15%, transparent)`, color: colors[market] }}>
         {labels[market]}
       </span>
     );
   };
+
+  const displaySym = (sym: string) => sym.replace("=X", "").replace(".NS", "").replace("^", "");
 
   return (
     <div className="w-[210px] flex flex-col overflow-hidden border-l" style={{ background: 'var(--bg2)', borderColor: 'var(--border)' }}>
@@ -71,17 +61,14 @@ export default function RightSidebar() {
       {activeTab === "watch" && (
         <div className="flex-1 flex flex-col overflow-hidden">
           <div className="flex-1 overflow-y-auto">
-            {WATCH_LIST.map((item) => {
+            {watchlist.map((item) => {
               const isActive = symbol === item.symbol;
-              const itemTicker = watchlist.find((w) => w.symbol === item.symbol);
-              const price = itemTicker?.price || item.basePrice;
-              const change = itemTicker?.changePercent || 0;
 
               return (
                 <div
                   key={item.symbol}
                   onClick={() => setSymbol(item.symbol, item.name, item.market)}
-                  className="flex items-center justify-between px-2.5 py-1.5 cursor-pointer transition-all border-b"
+                  className="flex items-center justify-between px-2.5 py-1.5 cursor-pointer transition-all border-b group"
                   style={{
                     background: isActive ? 'var(--bg3)' : 'transparent',
                     borderColor: 'var(--border)',
@@ -89,20 +76,31 @@ export default function RightSidebar() {
                   onMouseEnter={(e) => { if (!isActive) e.currentTarget.style.background = 'var(--bg3)'; }}
                   onMouseLeave={(e) => { if (!isActive) e.currentTarget.style.background = 'transparent'; }}
                 >
-                  <div className="flex flex-col">
+                  <div className="flex flex-col min-w-0">
                     <div className="flex items-center">
-                      <span className="text-[11px] font-semibold" style={{ color: 'var(--text)' }}>{item.symbol.replace("=X", "").replace(".NS", "").replace("^", "")}</span>
+                      <span className="text-[11px] font-semibold truncate" style={{ color: 'var(--text)' }}>{displaySym(item.symbol)}</span>
                       {marketBadge(item.market)}
                     </div>
-                    <span className="text-[8px] mt-0.5" style={{ color: 'var(--text3)' }}>{item.name}</span>
+                    <span className="text-[8px] mt-0.5 truncate" style={{ color: 'var(--text3)' }}>{item.name}</span>
                   </div>
-                  <div className="text-right">
-                    <div className="text-[11px] font-semibold" style={{ color: 'var(--text)' }}>
-                      {price ? price.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "---"}
+                  <div className="text-right flex items-center gap-1">
+                    <div className="flex flex-col">
+                      <div className="text-[11px] font-semibold" style={{ color: 'var(--text)' }}>
+                        {item.price ? item.price.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "---"}
+                      </div>
+                      <div className="text-[8px]" style={{ color: item.changePercent >= 0 ? 'var(--green)' : 'var(--red)' }}>
+                        {item.changePercent ? `${item.changePercent >= 0 ? "+" : ""}${item.changePercent.toFixed(2)}%` : "---"}
+                      </div>
                     </div>
-                    <div className="text-[8px]" style={{ color: change >= 0 ? 'var(--green)' : 'var(--red)' }}>
-                      {change ? `${change >= 0 ? "+" : ""}${change.toFixed(2)}%` : "---"}
-                    </div>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); removeFromWatchlist(item.symbol); }}
+                      className="opacity-0 group-hover:opacity-100 transition-opacity"
+                      style={{ color: 'var(--text3)' }}
+                      onMouseEnter={(e) => e.currentTarget.style.color = 'var(--red)'}
+                      onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text3)'}
+                    >
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                    </button>
                   </div>
                 </div>
               );
@@ -188,14 +186,14 @@ export default function RightSidebar() {
         <div className="flex-1 overflow-y-auto">
           <div className="grid grid-cols-2">
             {[
-              { label: "Market Cap", value: "₹19.3L Cr" },
-              { label: "P/E Ratio", value: "28.4" },
-              { label: "Beta", value: "1.12" },
-              { label: "52W High", value: "3,024" },
-              { label: "52W Low", value: "2,180" },
-              { label: "Volume", value: "600K" },
-              { label: "Avg Vol", value: "450K" },
-              { label: "Div Yield", value: "0.35%" },
+              { label: "Market Cap", value: ticker?.volume24h ? `$${(ticker.volume24h / 1e9).toFixed(1)}B` : "—" },
+              { label: "24h High", value: ticker?.high24h?.toFixed(2) || "—" },
+              { label: "24h Low", value: ticker?.low24h?.toFixed(2) || "—" },
+              { label: "24h Volume", value: ticker?.volume24h ? `${(ticker.volume24h / 1e6).toFixed(1)}M` : "—" },
+              { label: "Change", value: ticker?.change ? `${ticker.change >= 0 ? "+" : ""}${ticker.change.toFixed(2)}` : "—" },
+              { label: "Change %", value: ticker?.changePercent ? `${ticker.changePercent >= 0 ? "+" : ""}${ticker.changePercent.toFixed(2)}%` : "—" },
+              { label: "Price", value: ticker?.price?.toFixed(2) || "—" },
+              { label: "Exchange", value: market === "crypto" ? "Binance" : "Yahoo" },
             ].map((stat, i) => (
               <div key={i} className="px-2.5 py-1 border-r border-b" style={{ borderColor: 'var(--border)' }}>
                 <div className="text-[8px] uppercase tracking-wider" style={{ color: 'var(--text3)' }}>{stat.label}</div>
@@ -206,7 +204,7 @@ export default function RightSidebar() {
         </div>
       )}
 
-      {/* Alert Panel (hidden by default, toggled by bell icon) */}
+      {/* Alert Panel */}
       {activeTab === "alerts" && (
         <div className="flex-1 flex flex-col overflow-hidden">
           <div className="p-2 border-b" style={{ borderColor: 'var(--border)' }}>
@@ -215,8 +213,6 @@ export default function RightSidebar() {
               <select className="w-full text-[10px] px-2 py-1 rounded outline-none" style={{ background: 'var(--bg4)', border: '1px solid var(--border2)', color: 'var(--text)' }}>
                 <option>Price crosses above</option>
                 <option>Price crosses below</option>
-                <option>RSI goes above 70</option>
-                <option>RSI goes below 30</option>
               </select>
               <input type="number" placeholder="Target price" className="w-full text-[10px] px-2 py-1 rounded outline-none" style={{ background: 'var(--bg4)', border: '1px solid var(--border2)', color: 'var(--text)' }} />
               <button className="w-full py-1.5 rounded-lg text-[10px] font-semibold" style={{ background: 'var(--accent)', color: '#fff' }}>
@@ -227,12 +223,12 @@ export default function RightSidebar() {
           <div className="flex-1 overflow-y-auto p-1.5">
             {alerts.length === 0 ? (
               <div className="text-center text-[10px] py-4" style={{ color: 'var(--text3)' }}>
-                No alerts yet.<br />Create one above.
+                No alerts yet.
               </div>
             ) : (
               alerts.map((alert) => (
-                <div key={alert.id} className="p-2 rounded-lg mb-1 border" style={{ background: 'var(--bg3)', borderColor: 'var(--border2)' }}>
-                  <div className="text-[11px] font-bold" style={{ color: 'var(--text)' }}>{alert.symbol}</div>
+                <div key={alert.id} className="p-2 rounded-lg mb-1 border" style={{ background: 'var(--bg3)', borderColor: alert.active ? 'var(--amber)' : 'var(--border2)' }}>
+                  <div className="text-[11px] font-bold" style={{ color: 'var(--text)' }}>{displaySym(alert.symbol)}</div>
                   <div className="text-[9px]" style={{ color: 'var(--text2)' }}>{alert.type} {alert.price}</div>
                 </div>
               ))

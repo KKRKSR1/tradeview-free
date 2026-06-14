@@ -4,7 +4,6 @@ import { useEffect, useRef } from "react";
 import { useStore } from "@/store/useStore";
 import { BinanceWebSocket, fetchKlines, fetchTicker } from "@/lib/binance";
 import { fetchYahooKlines, fetchYahooTicker } from "@/lib/yahoo";
-import { WatchlistItem } from "@/types";
 
 export default function DataFetcher() {
   const {
@@ -38,7 +37,6 @@ export default function DataFetcher() {
             fetchTicker(symbol),
           ]);
         } else {
-          // Yahoo Finance for forex and indian stocks
           candles = await fetchYahooKlines(symbol, interval, market);
           tickerData = await fetchYahooTicker(symbol, market);
         }
@@ -60,7 +58,7 @@ export default function DataFetcher() {
           }
         }
       } catch (err) {
-        console.error("Failed to load data:", err);
+        console.error(`Failed to load data for ${symbol} (${market}):`, err);
         if (!cancelled) {
           setCandles([]);
           setTicker(null);
@@ -70,7 +68,6 @@ export default function DataFetcher() {
 
     loadData();
 
-    // WebSocket for crypto real-time updates
     wsRef.current?.destroy();
 
     if (market === "crypto") {
@@ -126,16 +123,15 @@ export default function DataFetcher() {
               changePercent: tickerData.changePercent,
             });
           }
-        } catch {
-          // ignore individual failures
+        } catch (err) {
+          // Silently ignore individual watchlist failures
         }
       }
     }
 
     updateWatchlist();
 
-    // Update less frequently to avoid rate limits
-    const intervalId = setInterval(updateWatchlist, 20000);
+    const intervalId = setInterval(updateWatchlist, 30000);
     return () => {
       cancelled = true;
       clearInterval(intervalId);
