@@ -1,0 +1,10 @@
+services:
+  - type: static_site
+    name: tradeview-free
+    runtime: static
+    buildCommand: npm install && npm run build
+    staticPublishPath: out
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
