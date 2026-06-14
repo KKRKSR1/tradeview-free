@@ -3,8 +3,8 @@
 import { useEffect, useRef } from "react";
 import { useStore } from "@/store/useStore";
 import { BinanceWebSocket, fetchKlines, fetchTicker } from "@/lib/binance";
-import { fetchYahooKlines, fetchYahooTicker, isYahooSymbol } from "@/lib/yahoo";
-import { MARKET_SYMBOLS, WatchlistItem } from "@/types";
+import { fetchYahooKlines, fetchYahooTicker } from "@/lib/yahoo";
+import { WatchlistItem } from "@/types";
 
 export default function DataFetcher() {
   const {
@@ -38,6 +38,7 @@ export default function DataFetcher() {
             fetchTicker(symbol),
           ]);
         } else {
+          // Yahoo Finance for forex and indian stocks
           candles = await fetchYahooKlines(symbol, interval, market);
           tickerData = await fetchYahooTicker(symbol, market);
         }
@@ -54,10 +55,16 @@ export default function DataFetcher() {
               volume24h: tickerData.volume24h,
             });
             checkAlerts(tickerData.price);
+          } else {
+            setTicker(null);
           }
         }
       } catch (err) {
         console.error("Failed to load data:", err);
+        if (!cancelled) {
+          setCandles([]);
+          setTicker(null);
+        }
       }
     }
 
@@ -98,8 +105,11 @@ export default function DataFetcher() {
 
   // Watchlist ticker updates
   useEffect(() => {
+    let cancelled = false;
+
     async function updateWatchlist() {
       for (const item of watchlist) {
+        if (cancelled) return;
         try {
           let tickerData: Awaited<ReturnType<typeof fetchTicker>> | null = null;
 
@@ -109,7 +119,7 @@ export default function DataFetcher() {
             tickerData = await fetchYahooTicker(item.symbol, item.market);
           }
 
-          if (tickerData) {
+          if (tickerData && !cancelled) {
             updateWatchlistItem(item.symbol, {
               price: tickerData.price,
               change: tickerData.change,
@@ -117,15 +127,19 @@ export default function DataFetcher() {
             });
           }
         } catch {
-          // ignore
+          // ignore individual failures
         }
       }
     }
 
     updateWatchlist();
 
-    const intervalId = setInterval(updateWatchlist, 15000);
-    return () => clearInterval(intervalId);
+    // Update less frequently to avoid rate limits
+    const intervalId = setInterval(updateWatchlist, 20000);
+    return () => {
+      cancelled = true;
+      clearInterval(intervalId);
+    };
   }, [watchlist, updateWatchlistItem]);
 
   return null;
