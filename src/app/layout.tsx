@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "TradeView-Free | Real-Time Crypto Charts",
-  description: "Free real-time cryptocurrency trading charts with technical indicators",
+  title: "TradeView Pro - Real-Time Trading Charts",
+  description: "Professional trading charts with real-time data - Crypto, Forex, Indian Stocks",
 };
 
 export default function RootLayout({
@@ -23,10 +23,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html
-      lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased dark`}
-    >
+    <html lang="en" className={`${geistSans.variable} ${geistMono.variable} h-full`}>
       <body className="h-full overflow-hidden">{children}</body>
     </html>
   );

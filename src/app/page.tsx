@@ -1,58 +1,48 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import Header from "@/components/Header";
-import Sidebar from "@/components/Sidebar";
-import TimeframeSelector from "@/components/TimeframeSelector";
-import IndicatorPanel from "@/components/IndicatorPanel";
-import MarketSelector from "@/components/MarketSelector";
+import LeftToolbar from "@/components/LeftToolbar";
+import TopToolbar from "@/components/TopToolbar";
+import ChartControls from "@/components/ChartControls";
+import OHLCVDisplay from "@/components/OHLCVDisplay";
+import StatusBar from "@/components/StatusBar";
 import DataFetcher from "@/components/DataFetcher";
 import SettingsPanel from "@/components/SettingsPanel";
 import AlertsPanel from "@/components/AlertsPanel";
-import DrawingTools from "@/components/DrawingTools";
 
 const ChartContainer = dynamic(() => import("@/components/ChartContainer"), {
   ssr: false,
   loading: () => (
-    <div className="flex-1 flex items-center justify-center bg-[#0f0f0f]">
-      <div className="text-zinc-500">Loading chart...</div>
+    <div className="flex-1 flex items-center justify-center bg-[#131722]">
+      <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
     </div>
   ),
 });
 
 export default function Home() {
   return (
-    <div className="h-screen flex flex-col bg-[#0a0a0a] text-white overflow-hidden">
+    <div className="h-screen flex flex-col bg-[#131722] text-white overflow-hidden select-none">
       <DataFetcher />
       <SettingsPanel />
       <AlertsPanel />
-      <Header />
+
+      {/* Top Toolbar */}
+      <TopToolbar />
 
       <div className="flex flex-1 overflow-hidden">
-        <Sidebar />
+        {/* Left Toolbar + Watchlist */}
+        <LeftToolbar />
 
-        <main className="flex-1 flex flex-col overflow-hidden">
-          <div className="h-9 bg-[#0f0f0f] border-b border-[#1a1a1a] flex items-center overflow-x-auto shrink-0">
-            <MarketSelector />
-            <div className="w-px h-4 bg-[#252525] mx-1" />
-            <TimeframeSelector />
-            <div className="w-px h-4 bg-[#252525] mx-1" />
-            <IndicatorPanel />
-            <div className="w-px h-4 bg-[#252525] mx-1" />
-            <DrawingTools />
-          </div>
-
+        {/* Main Chart Area */}
+        <div className="flex-1 flex flex-col overflow-hidden relative">
+          <OHLCVDisplay />
+          <ChartControls />
           <ChartContainer />
-
-          <div className="h-6 bg-[#0f0f0f] border-t border-[#1a1a1a] flex items-center px-3 text-[10px] text-zinc-500 shrink-0">
-            <span>TradeView-Free</span>
-            <span className="mx-2">|</span>
-            <span>Crypto: Binance | Forex & India: Yahoo Finance</span>
-            <span className="mx-2">|</span>
-            <span>Real-time Charts</span>
-          </div>
-        </main>
+        </div>
       </div>
+
+      {/* Status Bar */}
+      <StatusBar />
     </div>
   );
 }

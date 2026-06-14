@@ -1,8 +1,5 @@
 import { CandleData, MarketType, Timeframe } from "@/types";
 
-const YAHOO_BASE = "https://query1.finance.yahoo.com/v8/finance/chart";
-const CORS_PROXY = "https://corsproxy.io/?";
-
 export const YAHOO_INTERVAL_MAP: Record<Timeframe, string> = {
   "1s": "1m", "5s": "1m", "15s": "1m", "30s": "1m",
   "1m": "1m", "2m": "1m", "3m": "1m", "5m": "5m",
@@ -23,17 +20,6 @@ export const YAHOO_RANGE_MAP: Record<Timeframe, string> = {
   "1w": "5y", "1M": "max",
 };
 
-async function fetchWithProxy(url: string): Promise<Response> {
-  // Try direct first, fallback to CORS proxy
-  try {
-    const directRes = await fetch(url);
-    if (directRes.ok) return directRes;
-  } catch {
-    // CORS blocked, use proxy
-  }
-  return fetch(`${CORS_PROXY}${encodeURIComponent(url)}`);
-}
-
 export async function fetchYahooKlines(
   symbol: string,
   interval: Timeframe,
@@ -42,10 +28,11 @@ export async function fetchYahooKlines(
 ): Promise<CandleData[]> {
   const yahooInterval = YAHOO_INTERVAL_MAP[interval];
   const range = YAHOO_RANGE_MAP[interval];
-  const url = `${YAHOO_BASE}/${encodeURIComponent(symbol)}?interval=${yahooInterval}&range=${range}`;
 
-  const res = await fetchWithProxy(url);
-  if (!res.ok) throw new Error(`Yahoo API error: ${res.status}`);
+  // Use our API route to bypass CORS
+  const url = `/api/yahoo?symbol=${encodeURIComponent(symbol)}&interval=${yahooInterval}&range=${range}`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`API error: ${res.status}`);
   const data = await res.json();
 
   const result = data.chart?.result?.[0];
@@ -79,10 +66,9 @@ export async function fetchYahooKlines(
 }
 
 export async function fetchYahooTicker(symbol: string, market: MarketType) {
-  const url = `${YAHOO_BASE}/${encodeURIComponent(symbol)}?interval=1d&range=2d`;
-
-  const res = await fetchWithProxy(url);
-  if (!res.ok) throw new Error(`Yahoo API error: ${res.status}`);
+  const url = `/api/yahoo?symbol=${encodeURIComponent(symbol)}&interval=1d&range=2d`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`API error: ${res.status}`);
   const data = await res.json();
 
   const result = data.chart?.result?.[0];
@@ -103,8 +89,4 @@ export async function fetchYahooTicker(symbol: string, market: MarketType) {
     low24h: meta.regularMarketDayLow || price,
     volume24h: meta.regularMarketVolume || 0,
   };
-}
-
-export function isYahooSymbol(symbol: string, market: MarketType): boolean {
-  return market === "forex" || market === "indian";
 }
