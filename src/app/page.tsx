@@ -5,7 +5,10 @@ import Header from "@/components/Header";
 import Sidebar from "@/components/Sidebar";
 import TimeframeSelector from "@/components/TimeframeSelector";
 import IndicatorPanel from "@/components/IndicatorPanel";
+import MarketSelector from "@/components/MarketSelector";
 import DataFetcher from "@/components/DataFetcher";
+import SettingsPanel from "@/components/SettingsPanel";
+import AlertsPanel from "@/components/AlertsPanel";
 
 const ChartContainer = dynamic(() => import("@/components/ChartContainer"), {
   ssr: false,
@@ -20,6 +23,8 @@ export default function Home() {
   return (
     <div className="h-screen flex flex-col bg-[#0a0a0a] text-white overflow-hidden">
       <DataFetcher />
+      <SettingsPanel />
+      <AlertsPanel />
       <Header />
 
       <div className="flex flex-1 overflow-hidden">
@@ -27,6 +32,8 @@ export default function Home() {
 
         <main className="flex-1 flex flex-col overflow-hidden">
           <div className="h-9 bg-[#0f0f0f] border-b border-[#1a1a1a] flex items-center overflow-x-auto shrink-0">
+            <MarketSelector />
+            <div className="w-px h-4 bg-[#252525] mx-1" />
             <TimeframeSelector />
             <div className="w-px h-4 bg-[#252525] mx-1" />
             <IndicatorPanel />
@@ -37,9 +44,9 @@ export default function Home() {
           <div className="h-6 bg-[#0f0f0f] border-t border-[#1a1a1a] flex items-center px-3 text-[10px] text-zinc-500 shrink-0">
             <span>TradeView-Free</span>
             <span className="mx-2">|</span>
-            <span>Data: Binance</span>
+            <span>Crypto: Binance | Forex & India: Yahoo Finance</span>
             <span className="mx-2">|</span>
-            <span>Real-time Crypto Charts</span>
+            <span>Real-time Charts</span>
           </div>
         </main>
       </div>
