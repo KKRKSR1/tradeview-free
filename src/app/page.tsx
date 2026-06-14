@@ -9,6 +9,7 @@ import MarketSelector from "@/components/MarketSelector";
 import DataFetcher from "@/components/DataFetcher";
 import SettingsPanel from "@/components/SettingsPanel";
 import AlertsPanel from "@/components/AlertsPanel";
+import DrawingTools from "@/components/DrawingTools";
 
 const ChartContainer = dynamic(() => import("@/components/ChartContainer"), {
   ssr: false,
@@ -37,6 +38,8 @@ export default function Home() {
             <TimeframeSelector />
             <div className="w-px h-4 bg-[#252525] mx-1" />
             <IndicatorPanel />
+            <div className="w-px h-4 bg-[#252525] mx-1" />
+            <DrawingTools />
           </div>
 
           <ChartContainer />
