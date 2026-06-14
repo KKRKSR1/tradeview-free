@@ -66,9 +66,13 @@ export interface Alert {
 export interface Drawing {
   id: string;
   type: DrawingToolType;
-  points: { time: number; price: number }[];
+  points?: { time: number; price: number }[];
   color: string;
   text?: string;
+  x1?: number;
+  y1?: number;
+  x2?: number;
+  y2?: number;
 }
 
 export interface ChartLayout {

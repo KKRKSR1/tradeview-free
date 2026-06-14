@@ -20,7 +20,6 @@ export default function OHLCVDisplay() {
     return () => window.removeEventListener("chart:crosshair", handler);
   }, []);
 
-  // Show last candle if no crosshair data
   useEffect(() => {
     if (!data && candles.length > 0) {
       const last = candles[candles.length - 1];
@@ -40,17 +39,22 @@ export default function OHLCVDisplay() {
   const isUp = data.close >= data.open;
 
   return (
-    <div className="absolute top-2 left-16 z-20 flex items-center gap-3 text-[11px] font-mono pointer-events-none">
-      <span className="text-zinc-500">O</span>
-      <span className={isUp ? "text-emerald-400" : "text-red-400"}>{data.open.toFixed(2)}</span>
-      <span className="text-zinc-500">H</span>
-      <span className={isUp ? "text-emerald-400" : "text-red-400"}>{data.high.toFixed(2)}</span>
-      <span className="text-zinc-500">L</span>
-      <span className={isUp ? "text-emerald-400" : "text-red-400"}>{data.low.toFixed(2)}</span>
-      <span className="text-zinc-500">C</span>
-      <span className={isUp ? "text-emerald-400" : "text-red-400"}>{data.close.toFixed(2)}</span>
-      <span className="text-zinc-500">Vol</span>
-      <span className="text-zinc-400">{(data.volume / 1000000).toFixed(2)}M</span>
+    <div className="flex items-center gap-2 px-2.5 py-1.5 border-b flex-wrap" style={{ background: 'var(--bg2)', borderColor: 'var(--border)' }}>
+      <div className="text-[9px]" style={{ color: 'var(--text3)' }}>
+        O<span className="font-semibold ml-0.5" style={{ color: 'var(--text)' }}>{data.open.toFixed(2)}</span>
+      </div>
+      <div className="text-[9px]" style={{ color: 'var(--text3)' }}>
+        H<span className="font-semibold ml-0.5" style={{ color: 'var(--green)' }}>{data.high.toFixed(2)}</span>
+      </div>
+      <div className="text-[9px]" style={{ color: 'var(--text3)' }}>
+        L<span className="font-semibold ml-0.5" style={{ color: 'var(--red)' }}>{data.low.toFixed(2)}</span>
+      </div>
+      <div className="text-[9px]" style={{ color: 'var(--text3)' }}>
+        C<span className="font-semibold ml-0.5" style={{ color: 'var(--text)' }}>{data.close.toFixed(2)}</span>
+      </div>
+      <div className="text-[9px]" style={{ color: 'var(--text3)' }}>
+        V<span className="font-semibold ml-0.5" style={{ color: 'var(--text)' }}>{(data.volume / 1000000).toFixed(2)}M</span>
+      </div>
     </div>
   );
 }

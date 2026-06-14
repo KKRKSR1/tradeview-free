@@ -16,6 +16,7 @@ import {
 } from "lightweight-charts";
 import { useStore } from "@/store/useStore";
 import { sma, ema, rsi, macd, bollingerBands, ichimoku, supertrend, vwap, stochastic, adx, atr, obv, cci, williamsR, psar, kc, dc, hma, dema, tema, mfi } from "@/lib/indicators";
+import { DrawingToolType } from "@/types";
 
 export default function ChartContainer() {
   const chartContainerRef = useRef<HTMLDivElement>(null);
@@ -86,6 +87,44 @@ export default function ChartContainer() {
     const cleanup = initChart();
     return cleanup;
   }, [initChart]);
+
+  // Chart control events
+  useEffect(() => {
+    const handleFitContent = () => {
+      chartRef.current?.timeScale().fitContent();
+    };
+    const handleZoomIn = () => {
+      const ts = chartRef.current?.timeScale();
+      if (ts) {
+        const visibleRange = ts.getVisibleLogicalRange();
+        if (visibleRange) {
+          const mid = (visibleRange.from + visibleRange.to) / 2;
+          const span = (visibleRange.to - visibleRange.from) * 0.7;
+          ts.setVisibleLogicalRange({ from: mid - span / 2, to: mid + span / 2 });
+        }
+      }
+    };
+    const handleZoomOut = () => {
+      const ts = chartRef.current?.timeScale();
+      if (ts) {
+        const visibleRange = ts.getVisibleLogicalRange();
+        if (visibleRange) {
+          const mid = (visibleRange.from + visibleRange.to) / 2;
+          const span = (visibleRange.to - visibleRange.from) * 1.4;
+          ts.setVisibleLogicalRange({ from: mid - span / 2, to: mid + span / 2 });
+        }
+      }
+    };
+
+    window.addEventListener("chart:fitContent", handleFitContent);
+    window.addEventListener("chart:zoomIn", handleZoomIn);
+    window.addEventListener("chart:zoomOut", handleZoomOut);
+    return () => {
+      window.removeEventListener("chart:fitContent", handleFitContent);
+      window.removeEventListener("chart:zoomIn", handleZoomIn);
+      window.removeEventListener("chart:zoomOut", handleZoomOut);
+    };
+  }, []);
 
   // Update main series
   useEffect(() => {
@@ -482,13 +521,120 @@ export default function ChartContainer() {
     }
   }, [candles, indicators]);
 
+  // Drawing state
+  const [drawStart, setDrawStart] = useState<{ x: number; y: number } | null>(null);
+  const [drawCurrent, setDrawCurrent] = useState<{ x: number; y: number } | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const { drawingMode, drawings, addDrawing } = useStore();
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (!drawingMode) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    setDrawStart({ x: e.clientX - rect.left, y: e.clientY - rect.top });
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!drawStart || !drawingMode) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    setDrawCurrent({ x: e.clientX - rect.left, y: e.clientY - rect.top });
+  };
+
+  const handleMouseUp = (e: React.MouseEvent) => {
+    if (!drawStart || !drawingMode) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const end = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+
+    if (Math.abs(end.x - drawStart.x) > 5 || Math.abs(end.y - drawStart.y) > 5) {
+      addDrawing({
+        id: `draw_${Date.now()}`,
+        type: drawingMode as DrawingToolType,
+        x1: drawStart.x,
+        y1: drawStart.y,
+        x2: end.x,
+        y2: end.y,
+        color: "#ffd700",
+      });
+    }
+    setDrawStart(null);
+    setDrawCurrent(null);
+  };
+
+  // Draw on overlay canvas
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    canvas.width = canvas.clientWidth;
+    canvas.height = canvas.clientHeight;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    const drawShape = (x1: number, y1: number, x2: number, y2: number, color: string, shapeType?: string) => {
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 1;
+      ctx.setLineDash([]);
+
+      const type = shapeType || drawingMode;
+
+      if (type === "trendline") {
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
+        ctx.stroke();
+      } else if (type === "rectangle") {
+        ctx.strokeRect(Math.min(x1, x2), Math.min(y1, y2), Math.abs(x2 - x1), Math.abs(y2 - y1));
+      } else if (type === "fibonacci") {
+        const fibs = [0, 0.236, 0.382, 0.5, 0.618, 0.786, 1];
+        fibs.forEach((f) => {
+          const y = y1 + (y2 - y1) * f;
+          ctx.beginPath();
+          ctx.setLineDash([4, 4]);
+          ctx.moveTo(Math.min(x1, x2), y);
+          ctx.lineTo(Math.max(x1, x2), y);
+          ctx.stroke();
+        });
+        ctx.setLineDash([]);
+      } else if (type === "horizontal") {
+        ctx.beginPath();
+        ctx.setLineDash([6, 4]);
+        ctx.moveTo(0, y1);
+        ctx.lineTo(x2, y1);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+    };
+
+    drawings.forEach((d) => {
+      if (d.x1 !== undefined && d.y1 !== undefined && d.x2 !== undefined && d.y2 !== undefined) {
+        drawShape(d.x1, d.y1, d.x2, d.y2, d.color || "#ffd700", d.type);
+      }
+    });
+
+    if (drawStart && drawCurrent) {
+      drawShape(drawStart.x, drawStart.y, drawCurrent.x, drawCurrent.y, "#ffd700");
+    }
+  }, [drawings, drawStart, drawCurrent, drawingMode]);
+
   return (
-    <div className="flex-1 relative" ref={chartContainerRef}>
+    <div
+      className="flex-1 relative"
+      ref={chartContainerRef}
+      style={{ cursor: drawingMode ? 'crosshair' : 'default' }}
+      onMouseDown={handleMouseDown}
+      onMouseMove={handleMouseMove}
+      onMouseUp={handleMouseUp}
+    >
+      <canvas
+        ref={canvasRef}
+        className="absolute inset-0 pointer-events-none z-10"
+        style={{ width: '100%', height: '100%' }}
+      />
       {candles.length === 0 && (
-        <div className="absolute inset-0 flex items-center justify-center bg-[#131722] z-10">
+        <div className="absolute inset-0 flex items-center justify-center z-10" style={{ background: 'var(--bg)' }}>
           <div className="flex flex-col items-center gap-3">
-            <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
-            <div className="text-zinc-400 text-sm">Loading chart data...</div>
+            <div className="w-8 h-8 border-2 rounded-full animate-spin" style={{ borderColor: 'var(--accent)', borderTopColor: 'transparent' }} />
+            <div className="text-sm" style={{ color: 'var(--text2)' }}>Loading chart data...</div>
           </div>
         </div>
       )}

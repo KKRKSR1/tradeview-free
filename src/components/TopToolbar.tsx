@@ -2,99 +2,123 @@
 
 import { useState, useRef, useEffect } from "react";
 import { useStore } from "@/store/useStore";
-import { MARKET_SYMBOLS, TIMEFRAMES, PREMIUM_INDICATORS, Timeframe, IndicatorType, MarketType } from "@/types";
-import {
-  Search, ChevronDown, BarChart3, TrendingUp, Bell, Settings,
-  Grid, RefreshCw, ZoomIn, ZoomOut, Maximize
-} from "lucide-react";
+import { MARKET_SYMBOLS, TIMEFRAMES, Timeframe, MarketType } from "@/types";
 
 export default function TopToolbar() {
   const {
     symbol, symbolName, market, interval, setInterval,
-    setSymbol, indicators, toggleIndicator, ticker,
-    toggleSettings, toggleAlerts,
+    setSymbol, ticker, toggleAlerts,
   } = useStore();
 
   const [showSymbolSearch, setShowSymbolSearch] = useState(false);
-  const [showTimeframes, setShowTimeframes] = useState(false);
-  const [showIndicators, setShowIndicators] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
   const searchRef = useRef<HTMLDivElement>(null);
+  const [chartType, setChartType] = useState<"candlestick" | "heikin" | "line" | "area">("candlestick");
 
-  // Filter symbols for search
-  const allSymbols = Object.entries(MARKET_SYMBOLS).flatMap(([market, symbols]) =>
-    symbols.map((s) => ({ ...s, market: market as MarketType }))
-  );
-  const filteredSymbols = allSymbols.filter(
-    (s) =>
-      s.symbol.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      s.name.toLowerCase().includes(searchQuery.toLowerCase())
-  ).slice(0, 20);
-
-  // Close dropdowns on outside click
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (searchRef.current && !searchRef.current.contains(e.target as HTMLElement)) {
         setShowSymbolSearch(false);
-        setShowTimeframes(false);
-        setShowIndicators(false);
       }
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  const marketLabel: Record<MarketType, string> = { crypto: "CRYPTO", forex: "FOREX", indian: "INDIA" };
-  const marketColor: Record<MarketType, string> = { crypto: "bg-amber-500/20 text-amber-400", forex: "bg-blue-500/20 text-blue-400", indian: "bg-orange-500/20 text-orange-400" };
+  const marketSymbols = Object.entries(MARKET_SYMBOLS).flatMap(([mkt, syms]) =>
+    syms.map((s) => ({ ...s, market: mkt as MarketType }))
+  );
+
+  const displaySymbol = symbol.replace("=X", "").replace(".NS", "").replace("^", "");
+  const priceChange = ticker?.changePercent || 0;
+  const isUp = priceChange >= 0;
 
   return (
-    <div className="h-11 bg-[#1e222d] border-b border-[#2a2e39] flex items-center px-2 gap-1 shrink-0">
-      {/* Symbol Search */}
+    <div className="flex items-center px-3.5 gap-2 border-b shrink-0" style={{ height: '48px', background: 'var(--bg2)', borderColor: 'var(--border)' }}>
+      {/* Logo */}
+      <div className="flex items-center gap-1 mr-1 whitespace-nowrap">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M3 3v18h18"/><path d="M7 16l4-8 4 4 4-6"/>
+        </svg>
+        <span className="text-sm font-bold text-white">Pro<span style={{ color: 'var(--accent)' }}>Chart</span></span>
+      </div>
+
+      <div className="vsep" />
+
+      {/* Symbol Pill */}
       <div className="relative" ref={searchRef}>
         <button
           onClick={() => setShowSymbolSearch(!showSymbolSearch)}
-          className="flex items-center gap-2 px-3 py-1.5 rounded hover:bg-[#2a2e39] transition-colors"
+          className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 transition-all border"
+          style={{ background: 'var(--bg4)', borderColor: 'var(--border2)' }}
+          onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--accent)'; e.currentTarget.style.color = 'var(--accent)'; }}
+          onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border2)'; e.currentTarget.style.color = 'var(--text)'; }}
         >
-          <span className="text-white font-bold text-sm">{symbol.replace("=X", "").replace(".NS", "")}</span>
-          <span className={`text-[9px] px-1 py-0.5 rounded ${marketColor[market]}`}>{marketLabel[market]}</span>
-          <ChevronDown size={12} className="text-zinc-400" />
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--text3)" strokeWidth="2">
+            <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
+          </svg>
+          <select
+            value={symbol}
+            onChange={(e) => {
+              const s = marketSymbols.find((s) => s.symbol === e.target.value);
+              if (s) setSymbol(s.symbol, s.name, s.market);
+            }}
+            className="text-xs font-semibold cursor-pointer outline-none"
+            style={{ background: 'none', border: 'none', color: 'var(--text)', maxWidth: '110px' }}
+          >
+            <optgroup label="Indian Stocks">
+              {marketSymbols.filter(s => s.market === 'indian').map(s => (
+                <option key={s.symbol} value={s.symbol}>{s.symbol.replace('.NS', '')}</option>
+              ))}
+            </optgroup>
+            <optgroup label="Crypto">
+              {marketSymbols.filter(s => s.market === 'crypto').map(s => (
+                <option key={s.symbol} value={s.symbol}>{s.symbol.replace('USDT', '/USDT')}</option>
+              ))}
+            </optgroup>
+            <optgroup label="Forex">
+              {marketSymbols.filter(s => s.market === 'forex').map(s => (
+                <option key={s.symbol} value={s.symbol}>{s.symbol.replace('=X', '')}</option>
+              ))}
+            </optgroup>
+          </select>
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--text3)" strokeWidth="2">
+            <path d="M6 9l6 6 6-6"/>
+          </svg>
         </button>
 
         {showSymbolSearch && (
-          <div className="absolute top-full left-0 mt-1 w-80 bg-[#1e222d] border border-[#2a2e39] rounded-lg shadow-2xl z-50">
-            <div className="p-2 border-b border-[#2a2e39]">
-              <div className="relative">
-                <Search size={14} className="absolute left-2 top-1/2 -translate-y-1/2 text-zinc-500" />
-                <input
-                  autoFocus
-                  type="text"
-                  placeholder="Search symbol..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full bg-[#131722] text-white text-sm pl-8 pr-3 py-2 rounded border border-[#2a2e39] focus:border-blue-500 focus:outline-none"
-                />
-              </div>
+          <div className="absolute top-full left-0 mt-1 w-72 rounded-xl shadow-2xl z-50 overflow-hidden" style={{ background: 'var(--bg2)', border: '1px solid var(--border2)' }}>
+            <div className="p-2 border-b" style={{ borderColor: 'var(--border)' }}>
+              <input
+                autoFocus
+                type="text"
+                placeholder="Search symbol..."
+                className="w-full text-xs pl-3 pr-2 py-2 rounded-lg outline-none"
+                style={{ background: 'var(--bg3)', border: '1px solid var(--border2)', color: 'var(--text)' }}
+              />
             </div>
-            <div className="max-h-80 overflow-y-auto">
-              {filteredSymbols.map((s) => (
+            <div className="max-h-64 overflow-y-auto">
+              {marketSymbols.slice(0, 15).map((s) => (
                 <button
                   key={s.symbol}
                   onClick={() => {
                     setSymbol(s.symbol, s.name, s.market);
                     setShowSymbolSearch(false);
-                    setSearchQuery("");
                   }}
-                  className="w-full px-3 py-2 flex items-center justify-between hover:bg-[#2a2e39]"
+                  className="w-full px-3 py-2 flex items-center justify-between transition-all"
+                  style={{ color: 'var(--text)' }}
+                  onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg3)'}
+                  onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
                 >
                   <div className="flex items-center gap-2">
-                    <div className={`w-1.5 h-1.5 rounded-full bg-${s.market === "crypto" ? "amber" : s.market === "forex" ? "blue" : "orange"}-400`} />
+                    <div className="w-1.5 h-1.5 rounded-full" style={{ background: s.market === 'crypto' ? 'var(--blue)' : s.market === 'forex' ? 'var(--teal)' : 'var(--purple)' }} />
                     <div className="text-left">
-                      <div className="text-sm text-white">{s.name}</div>
-                      <div className="text-[10px] text-zinc-500">{s.symbol.replace("=X", "").replace(".NS", "")}</div>
+                      <div className="text-xs font-medium">{s.name}</div>
+                      <div className="text-[10px]" style={{ color: 'var(--text3)' }}>{s.symbol.replace("=X", "").replace(".NS", "")}</div>
                     </div>
                   </div>
-                  <span className={`text-[9px] px-1.5 py-0.5 rounded ${marketColor[s.market]}`}>
-                    {s.market === "crypto" ? "CRYPTO" : s.market === "forex" ? "FOREX" : "INDIA"}
+                  <span className="text-[8px] px-1.5 py-0.5 rounded" style={{ background: s.market === 'crypto' ? 'rgba(56,189,248,0.15)' : s.market === 'forex' ? 'rgba(45,212,191,0.15)' : 'rgba(167,139,250,0.15)', color: s.market === 'crypto' ? 'var(--blue)' : s.market === 'forex' ? 'var(--teal)' : 'var(--purple)' }}>
+                    {s.market === 'crypto' ? 'CRYPTO' : s.market === 'forex' ? 'FOREX' : 'INDIA'}
                   </span>
                 </button>
               ))}
@@ -103,134 +127,91 @@ export default function TopToolbar() {
         )}
       </div>
 
-      <div className="w-px h-5 bg-[#2a2e39]" />
+      {/* Price Badge */}
+      {ticker && (
+        <span className="text-[15px] font-bold whitespace-nowrap" style={{ color: isUp ? 'var(--green)' : 'var(--red)' }}>
+          {ticker.price.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+        </span>
+      )}
 
-      {/* Timeframe */}
-      <div className="relative">
-        <button
-          onClick={() => setShowTimeframes(!showTimeframes)}
-          className="flex items-center gap-1 px-2 py-1.5 rounded hover:bg-[#2a2e39] text-white text-sm"
-        >
-          {interval}
-          <ChevronDown size={10} className="text-zinc-400" />
-        </button>
+      {/* Change Badge */}
+      {ticker && (
+        <span className="text-[10px] px-1.5 py-0.5 rounded font-medium whitespace-nowrap" style={{ background: isUp ? 'var(--greenBg)' : 'var(--redBg)', color: isUp ? 'var(--green)' : 'var(--red)' }}>
+          {isUp ? "+" : ""}{priceChange.toFixed(2)}%
+        </span>
+      )}
 
-        {showTimeframes && (
-          <div className="absolute top-full left-0 mt-1 w-32 bg-[#1e222d] border border-[#2a2e39] rounded-lg shadow-2xl z-50 p-1">
-            {TIMEFRAMES.map((tf) => (
-              <button
-                key={tf.value}
-                onClick={() => {
-                  setInterval(tf.value);
-                  setShowTimeframes(false);
-                }}
-                className={`w-full px-3 py-1.5 text-left text-xs rounded ${
-                  interval === tf.value
-                    ? "bg-blue-600 text-white"
-                    : "text-zinc-300 hover:bg-[#2a2e39]"
-                }`}
-              >
-                {tf.label}
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
+      <div className="vsep" />
 
-      <div className="w-px h-5 bg-[#2a2e39]" />
-
-      {/* Indicators */}
-      <div className="relative">
-        <button
-          onClick={() => setShowIndicators(!showIndicators)}
-          className="flex items-center gap-1.5 px-2 py-1.5 rounded hover:bg-[#2a2e39] text-zinc-300 text-xs"
-        >
-          <BarChart3 size={14} />
-          <span>Indicators</span>
-        </button>
-
-        {showIndicators && (
-          <div className="absolute top-full left-0 mt-1 w-64 bg-[#1e222d] border border-[#2a2e39] rounded-lg shadow-2xl z-50">
-            <div className="p-2 border-b border-[#2a2e39]">
-              <div className="relative">
-                <Search size={12} className="absolute left-2 top-1/2 -translate-y-1/2 text-zinc-500" />
-                <input
-                  type="text"
-                  placeholder="Search indicators..."
-                  className="w-full bg-[#131722] text-white text-xs pl-7 pr-2 py-1.5 rounded border border-[#2a2e39] focus:border-blue-500 focus:outline-none"
-                />
-              </div>
-            </div>
-            <div className="max-h-64 overflow-y-auto p-1">
-              {Object.entries(
-                PREMIUM_INDICATORS.reduce((acc, ind) => {
-                  if (!acc[ind.category]) acc[ind.category] = [];
-                  acc[ind.category].push(ind);
-                  return acc;
-                }, {} as Record<string, typeof PREMIUM_INDICATORS>)
-              ).map(([category, items]) => (
-                <div key={category}>
-                  <div className="px-2 py-1 text-[10px] text-zinc-500 uppercase font-semibold">{category}</div>
-                  {items.map((ind) => {
-                    const active = indicators.find((i) => i.type === ind.type)?.visible;
-                    return (
-                      <button
-                        key={ind.type}
-                        onClick={() => toggleIndicator(ind.type)}
-                        className={`w-full px-2 py-1.5 text-left text-xs rounded flex items-center justify-between ${
-                          active ? "bg-blue-600/20 text-blue-400" : "text-zinc-300 hover:bg-[#2a2e39]"
-                        }`}
-                      >
-                        <span>{ind.name}</span>
-                        {active && <span className="text-[10px] text-blue-400">ON</span>}
-                      </button>
-                    );
-                  })}
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
-
-      <div className="w-px h-5 bg-[#2a2e39]" />
-
-      {/* Active indicators badges */}
-      <div className="flex items-center gap-1">
-        {indicators.filter((i) => i.visible).map((ind) => (
-          <span
-            key={ind.type}
-            className="text-[10px] px-1.5 py-0.5 rounded bg-blue-600/20 text-blue-400 cursor-pointer hover:bg-blue-600/30"
-            onClick={() => toggleIndicator(ind.type)}
+      {/* Timeframe Buttons */}
+      <div className="flex gap-px">
+        {TIMEFRAMES.map((tf) => (
+          <button
+            key={tf.value}
+            onClick={() => setInterval(tf.value)}
+            className="text-[10px] font-medium px-1.5 py-0.5 rounded transition-all"
+            style={{
+              background: interval === tf.value ? 'var(--accent)' : 'transparent',
+              color: interval === tf.value ? '#fff' : 'var(--text2)',
+            }}
+            onMouseEnter={(e) => { if (interval !== tf.value) { e.currentTarget.style.background = 'var(--bg4)'; e.currentTarget.style.color = 'var(--text)'; }}}
+            onMouseLeave={(e) => { if (interval !== tf.value) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text2)'; }}}
           >
-            {ind.type.toUpperCase()}
-          </span>
+            {tf.label}
+          </button>
+        ))}
+      </div>
+
+      <div className="vsep" />
+
+      {/* Chart Type Buttons */}
+      <div className="flex gap-0.5">
+        {[
+          { type: "candlestick" as const, label: "Candles" },
+          { type: "heikin" as const, label: "Heikin" },
+          { type: "line" as const, label: "Line" },
+          { type: "area" as const, label: "Area" },
+        ].map((ct) => (
+          <button
+            key={ct.type}
+            onClick={() => setChartType(ct.type)}
+            className="text-[9px] px-1.5 py-0.5 rounded transition-all border"
+            style={{
+              background: chartType === ct.type ? 'var(--bg4)' : 'transparent',
+              borderColor: chartType === ct.type ? 'var(--accent)' : 'var(--border)',
+              color: chartType === ct.type ? 'var(--accent)' : 'var(--text2)',
+            }}
+          >
+            {ct.label}
+          </button>
         ))}
       </div>
 
       {/* Spacer */}
       <div className="flex-1" />
 
-      {/* Price display */}
-      {ticker && (
-        <div className="flex items-center gap-3 mr-3">
-          <span className={`font-mono text-sm font-bold ${ticker.change >= 0 ? "text-emerald-400" : "text-red-400"}`}>
-            {ticker.price.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-          </span>
-          <span className={`text-xs font-mono ${ticker.change >= 0 ? "text-emerald-400" : "text-red-400"}`}>
-            {ticker.change >= 0 ? "+" : ""}{ticker.changePercent.toFixed(2)}%
-          </span>
-        </div>
-      )}
-
-      <div className="w-px h-5 bg-[#2a2e39]" />
-
-      {/* Action buttons */}
-      <button onClick={toggleAlerts} className="w-8 h-8 flex items-center justify-center rounded hover:bg-[#2a2e39] text-zinc-400 hover:text-yellow-400" title="Alerts">
-        <Bell size={15} />
+      {/* AI Button */}
+      <button className="flex items-center gap-1 rounded-lg text-[10px] px-2 py-1 transition-all border" style={{ background: 'rgba(108,99,255,0.12)', borderColor: 'rgba(108,99,255,0.33)', color: 'var(--purple)' }}
+        onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--accent)'; e.currentTarget.style.color = 'var(--accent)'; }}
+        onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'rgba(108,99,255,0.33)'; e.currentTarget.style.color = 'var(--purple)'; }}>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M15 13v2"/><path d="M9 13v2"/></svg>
+        AI
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M7 17l9.2-9.2M17 17V7H7"/></svg>
       </button>
-      <button onClick={toggleSettings} className="w-8 h-8 flex items-center justify-center rounded hover:bg-[#2a2e39] text-zinc-400 hover:text-white" title="Settings">
-        <Settings size={15} />
+
+      {/* Alerts Button */}
+      <button onClick={toggleAlerts} className="flex items-center gap-1 rounded-lg text-[10px] px-2 py-1 transition-all border" style={{ background: 'rgba(245,158,11,0.12)', borderColor: 'rgba(245,158,11,0.33)', color: 'var(--amber)' }}
+        onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--amber)'; }}
+        onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'rgba(245,158,11,0.33)'; }}>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+        Alerts
+      </button>
+
+      {/* Settings Button */}
+      <button className="flex items-center gap-1 rounded-lg text-[10px] px-2 py-1 transition-all border" style={{ background: 'var(--bg3)', borderColor: 'var(--border2)', color: 'var(--text2)' }}
+        onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--accent)'; e.currentTarget.style.color = 'var(--accent)'; }}
+        onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border2)'; e.currentTarget.style.color = 'var(--text2)'; }}>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
       </button>
     </div>
   );

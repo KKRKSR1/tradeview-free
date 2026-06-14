@@ -1,33 +1,49 @@
 @import "tailwindcss";
 
 :root {
-  --background: #131722;
-  --foreground: #d1d4dc;
-  --tv-bg: #131722;
-  --tv-panel: #1e222d;
-  --tv-border: #2a2e39;
-  --tv-text: #d1d4dc;
-  --tv-text-dim: #787b86;
-  --tv-accent: #2962ff;
-  --tv-green: #26a69a;
-  --tv-red: #ef5350;
+  --bg: #0d0e14;
+  --bg2: #13141c;
+  --bg3: #1a1b26;
+  --bg4: #21223a;
+  --bg5: #282a40;
+  --border: rgba(255,255,255,0.05);
+  --border2: rgba(255,255,255,0.09);
+  --border3: rgba(255,255,255,0.16);
+  --text: #e2e4f0;
+  --text2: #8b8fa8;
+  --text3: #5a5d75;
+  --accent: #6c63ff;
+  --accent2: #8b5cf6;
+  --green: #22d97a;
+  --green2: #16a35a;
+  --greenBg: rgba(34,217,122,0.1);
+  --red: #ff4d6a;
+  --red2: #cc3355;
+  --redBg: rgba(255,77,106,0.1);
+  --blue: #38bdf8;
+  --amber: #f59e0b;
+  --purple: #a78bfa;
+  --teal: #2dd4bf;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-background: var(--bg);
+  --color-foreground: var(--text);
+  --font-sans: 'Inter', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
 }
 
 * {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
   scrollbar-width: thin;
-  scrollbar-color: #2a2e39 transparent;
+  scrollbar-color: var(--border2) transparent;
 }
 
 *::-webkit-scrollbar {
-  width: 4px;
-  height: 4px;
+  width: 3px;
+  height: 3px;
 }
 
 *::-webkit-scrollbar-track {
@@ -35,18 +51,18 @@
 }
 
 *::-webkit-scrollbar-thumb {
-  background: #2a2e39;
+  background: var(--border2);
   border-radius: 2px;
 }
 
 *::-webkit-scrollbar-thumb:hover {
-  background: #434651;
+  background: var(--border3);
 }
 
 body {
-  background: var(--tv-bg);
-  color: var(--tv-text);
-  font-family: 'Trebuchet MS', 'Lucida Grande', 'Lucida Sans', Arial, Verdana, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Inter', system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -55,19 +71,54 @@ input, select, textarea {
   font-family: inherit;
 }
 
-.chart-container {
-  background: #131722;
-}
-
-.tv-lightweight-charts {
-  border-radius: 0;
-}
-
 button {
   cursor: pointer;
   user-select: none;
+  border: none;
+  background: none;
 }
 
 button:active {
   transform: scale(0.98);
+}
+
+.vsep {
+  width: 1px;
+  height: 20px;
+  background: var(--border2);
+  margin: 0 2px;
+  flex-shrink: 0;
+}
+
+.glass {
+  background: rgba(19, 20, 28, 0.8);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.glow-accent {
+  box-shadow: 0 0 20px rgba(108, 99, 255, 0.15);
+}
+
+.glow-green {
+  box-shadow: 0 0 15px rgba(34, 217, 122, 0.1);
+}
+
+.glow-red {
+  box-shadow: 0 0 15px rgba(255, 77, 106, 0.1);
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+@keyframes slideIn {
+  from { transform: translateX(20px); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
 }
